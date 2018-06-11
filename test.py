@@ -94,8 +94,8 @@ def bwd_sum(name, ys, input_dict, grad_dict):
 
 def fwd_bwd_test(n_batch, hidden_dim, n_layers, distributed, n_devices=None, backprop=True):
     # test.
-    n_burn_in = 1
-    iters = 1
+    n_burn_in = 10
+    iters = 25
 
     with tf.Graph().as_default():
         x_in = tf.get_variable("data", dtype=tf.float32,
@@ -109,7 +109,6 @@ def fwd_bwd_test(n_batch, hidden_dim, n_layers, distributed, n_devices=None, bac
                 Wx = tf.matmul(W, x)
                 h = tf.nn.relu(Wx)
                 x = x + h
-            print(x.get_shape())
             y = tf.reduce_mean(x)
             weights = tf.trainable_variables()
             grads = tf.gradients(y, weights)
@@ -145,7 +144,6 @@ def fwd_bwd_test(n_batch, hidden_dim, n_layers, distributed, n_devices=None, bac
                         x_split[n] = x_split[n] + h
 
             y = tf.concat(x_split, axis=0)
-            print(y.get_shape())
             y = tf.reduce_mean(y)
             weights = tf.trainable_variables()
             grads = tf.gradients(y, weights, colocate_gradients_with_ops=True)
@@ -170,7 +168,7 @@ def fwd_bwd_test(n_batch, hidden_dim, n_layers, distributed, n_devices=None, bac
                 else:
                     val = sess.run(y, options=run_options)
             t1 = time.time()
-        print(val, "runtime: {}".format((t1-t0)/iters), "parameters: {:.4f}B".format(hidden_dim * hidden_dim * n_layers * 1e-9))
+        print("n_layers", n_layers, "devices:", n_devices, val, "runtime: {}".format((t1-t0)/iters), "parameters: {:.4f}B".format(hidden_dim * hidden_dim * n_layers * 1e-9))
 
 
 def correctness_test():
@@ -237,16 +235,101 @@ if __name__ == "__main__":
     # custom_back_test()
     # correctness_test()
 
-    # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=53, distributed=False)
+    # New tests, after fix:
+    # fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=36, distributed=False)
+    # fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=61, distributed=True, n_devices=2)
+    # fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=90, distributed=True, n_devices=4)
+    # fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=107, distributed=True, n_devices=8)
+
+
+    # for i in [36, 36, 37, 37]:
+    # # for i in range(30, 40):
+    #     try:
+    #         fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=i, distributed=False)
+    #     except tf.errors.ResourceExhaustedError:
+    #         print(i, "errored")
+    #         break
+    # for i in [60, 65, 70, 75, 80, 90, 100]:
+    # for i in range(60, 65):
+    #     try:
+    #         # fwd_bwd_test(n_batch=4096*2, hidden_dim=4096, n_layers=i, distributed=True, n_devices=2)
+    #         fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=i, distributed=True, n_devices=2)
+    #     except tf.errors.ResourceExhaustedError:
+    #         print(i, "errored")
+    #         break
+
+    # for i in [80, 90, 100, 110, 120, 130, 140, 150, 160]:
+    # fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=92, distributed=True, n_devices=4)
+    # for i in range(90, 140):
+    #     try:
+    #         # fwd_bwd_test(n_batch=4096*2, hidden_dim=4096, n_layers=i, distributed=True, n_devices=2)
+    #         fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=i, distributed=True, n_devices=4)
+    #     except tf.errors.ResourceExhaustedError:
+    #         print(i, "errored")
+    #         break
+
+    # for i in [90, 100, 110, 120, 130]:
+    # for i in range(100, 120):
+    #     try:
+    #         # fwd_bwd_test(n_batch=4096*2, hidden_dim=4096, n_layers=i, distributed=True, n_devices=2)
+    #         fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=i, distributed=True, n_devices=8)
+    #     except tf.errors.ResourceExhaustedError:
+    #         print(i, "errored")
+    #         break
+
+    # for i in [120, 130, 140, 150, 160, 170, 180, 190]:
+    # # for i in range(50, 60):
+    #     try:
+    #         # fwd_bwd_test(n_batch=4096*2, hidden_dim=4096, n_layers=i, distributed=True, n_devices=2)
+    #         fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=i, distributed=True, n_devices=8)
+    #     except tf.errors.ResourceExhaustedError:
+    #         print(i, "errored")
+    #         break
+
+
+    # for i in [50, 60, 70, 80, 90, 100, 120, 140, 160]:
+    #     try:
+    #         fwd_bwd_test(n_batch=4096*2, hidden_dim=4096, n_layers=i, distributed=True, n_devices=8)
+    #         fwd_bwd_test(n_batch=4096*2, hidden_dim=4096, n_layers=i, distributed=True, n_devices=8)
+    #     except tf.errors.ResourceExhaustedError:
+    #         errors = 1
+    #         for j in range(5):
+    #             try:
+    #                 fwd_bwd_test(n_batch=4096*2, hidden_dim=4096, n_layers=i, distributed=True, n_devices=8)
+    #             except tf.errors.ResourceExhaustedError:
+    #                 errors += 1
+    #                 if errors >= 3:
+    #                     break
+    #         print(i, "errored", errors, "times")
+    #         if errors >= 3:
+    #             break
+
+
+    # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=1, distributed=False, backprop=False)
+    # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=1, distributed=True, n_devices=2, backprop=False)
+
+    # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=80, distributed=False)
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=53, distributed=True, n_devices=2)
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=53, distributed=True, n_devices=4)
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=53, distributed=True, n_devices=8)
 
-    # How deep can you go, with storing all acts?
+
+    # for i in [65, 68, 70, 75, 80, 85, 90]:
+    #     try:
+    #         fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=i, distributed=True, n_devices=2)
+    #     except tf.errors.ResourceExhaustedError:
+    #         print(i, "errored.")
+
+    # for i in [68, 70, 75, 80, 85, 90]:
+    #     try:
+    #         fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=i, distributed=True, n_devices=4)
+    #     except tf.errors.ResourceExhaustedError:
+    #         print(i, "errored.")
+    
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=62, distributed=True, n_devices=2)
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=71, distributed=True, n_devices=4)
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=72, distributed=True, n_devices=8)
-    fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=65, distributed=True, n_devices=2)
+    # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=65, distributed=True, n_devices=2)
 
     # Does this change for wider networks
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=13, distributed=False)
