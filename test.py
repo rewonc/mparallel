@@ -111,9 +111,12 @@ def fwd_bwd_test(n_batch, hidden_dim, n_layers, distributed, n_devices=None, bac
                 x = x + h
             print(x.get_shape())
             y = tf.reduce_mean(x)
-            # grads = tf.gradients(y, tf.trainable_variables())
-            # now do the backwards pass.
-            meangrad = tf.reduce_mean(grads)
+            weights = tf.trainable_variables()
+            grads = tf.gradients(y, weights)
+            updates = []
+            for w, g in zip(weights, grads):
+                updates.append(tf.assign(w, w - g * 0.01))
+            train = tf.group(updates)
 
         if distributed:
             x_split = list(tf.split(x_in, n_devices, axis=0))
@@ -144,9 +147,15 @@ def fwd_bwd_test(n_batch, hidden_dim, n_layers, distributed, n_devices=None, bac
             y = tf.concat(x_split, axis=0)
             print(y.get_shape())
             y = tf.reduce_mean(y)
-            grads = tf.gradients(y, tf.trainable_variables(), colocate_gradients_with_ops=True)
-            import pdb; pdb.set_trace()
-            meangrad = tf.reduce_mean(grads)
+            weights = tf.trainable_variables()
+            grads = tf.gradients(y, weights, colocate_gradients_with_ops=True)
+            updates = []
+            for w, g in zip(weights, grads):
+                assert w.device == g.device
+                with tf.device(w.device):
+                    updates.append(tf.assign(w, w - g * 0.01))
+            train = tf.group(updates)
+            # meangrad = tf.reduce_mean(grads)
 
         run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
         with tf.Session() as sess:
@@ -156,12 +165,12 @@ def fwd_bwd_test(n_batch, hidden_dim, n_layers, distributed, n_devices=None, bac
                 if i == n_burn_in:
                     t0 = time.time()
                 if backprop:
-                    val, mg = sess.run([y, meangrad], options=run_options)
+                    val = "n/a"
+                    _ = sess.run(train, options=run_options)
                 else:
                     val = sess.run(y, options=run_options)
-                    mg = "n/a"
             t1 = time.time()
-        print(val, mg, "runtime: {}".format((t1-t0)/iters), "parameters: {:.4f}B".format(hidden_dim * hidden_dim * n_layers * 1e-9))
+        print(val, "runtime: {}".format((t1-t0)/iters), "parameters: {:.4f}B".format(hidden_dim * hidden_dim * n_layers * 1e-9))
 
 
 def correctness_test():
@@ -225,8 +234,9 @@ def correctness_test():
 
 if __name__ == "__main__":
     np.random.seed(42)
-    custom_back_test()
+    # custom_back_test()
     # correctness_test()
+
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=53, distributed=False)
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=53, distributed=True, n_devices=2)
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=53, distributed=True, n_devices=4)
@@ -236,6 +246,7 @@ if __name__ == "__main__":
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=62, distributed=True, n_devices=2)
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=71, distributed=True, n_devices=4)
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=72, distributed=True, n_devices=8)
+    fwd_bwd_test(n_batch=1024, hidden_dim=4096, n_layers=65, distributed=True, n_devices=2)
 
     # Does this change for wider networks
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=13, distributed=False)
