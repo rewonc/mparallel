@@ -236,11 +236,15 @@ if __name__ == "__main__":
     # correctness_test()
 
     # New tests, after fix:
-    # fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=36, distributed=False)
-    # fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=61, distributed=True, n_devices=2)
+    fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=36, distributed=False)
+    # n_layers 36 devices: None n/a runtime: 1.732391471862793 parameters: 2.4159B
+    fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=61, distributed=True, n_devices=2)
+    # n_layers 61 devices: 2 n/a runtime: 1.8960966396331786 parameters: 4.0936B
     # fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=90, distributed=True, n_devices=4)
-    # fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=107, distributed=True, n_devices=8)
-
+    fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=89, distributed=True, n_devices=4)
+    # n_layers 89 devices: 4 n/a runtime: 2.1880528831481936 parameters: 5.9727B
+    fwd_bwd_test(n_batch=1024, hidden_dim=4096*2, n_layers=106, distributed=True, n_devices=8)
+# n_layers 106 devices: 8 n/a runtime: 2.2055407524108888 parameters: 7.1135B
 
     # for i in [36, 36, 37, 37]:
     # # for i in range(30, 40):
